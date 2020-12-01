@@ -8,14 +8,15 @@ from pygame.locals import (
     K_RIGHT,
     K_ESCAPE,
     KEYDOWN,
-    QUIT
+    QUIT,
+    K_SPACE
 )
 
 
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-
+power = False
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super(Player,self).__init__()
@@ -58,9 +59,33 @@ class Enemy(pygame.sprite.Sprite):
         self.speed = random.randint(5,20)
 
     def update(self):
+        if pygame.sprite.spritecollideany(player, powerups):
+            self.kill()
         self.rect.move_ip(-self.speed, 0)
         if self.rect.right < 0:
             self.kill()
+
+class Powerup(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Powerup, self).__init__()
+        self.surf = pygame.image.load("images/pow_pow_power_rangers.png").convert()
+        self.surf.set_colorkey((255,255,255), RLEACCEL)
+        self.rect = self.surf.get_rect(
+            center =(
+                random.randint (SCREEN_WIDTH + 30, SCREEN_WIDTH + 30),
+                random.randint (0, SCREEN_HEIGHT),
+            )
+        )
+        self.speed = random.randint(5,20)
+
+    def update(self):
+        if self.rect.right < 0:
+            self.kill()
+        if pygame.sprite.spritecollideany(player, powerups):
+            self.kill()
+        self.rect.move_ip(-self.speed, 0)
+
+
 
 
 class Cloud(pygame.sprite.Sprite):
@@ -85,7 +110,7 @@ pygame.mixer.init()
 pygame.init()
 
 clock = pygame.time.Clock()
-score = 0
+
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
@@ -93,12 +118,18 @@ ADDENEMY = pygame.USEREVENT + 1
 pygame.time.set_timer(ADDENEMY, 250)
 ADDCLOUD = pygame.USEREVENT + 2
 pygame.time.set_timer(ADDCLOUD, 1000)
+ADDPOWERUP = pygame.USEREVENT + 3
+pygame.time.set_timer(ADDPOWERUP, 1000)
+
 player = Player()
+powerupp = Powerup()
+enemy = Enemy()
 
 enemies = pygame.sprite.Group()
 clouds = pygame.sprite.Group()
+powerups = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
-all_sprites.add(player)
+all_sprites.add(player, enemy, powerupp)
 
 pygame.mixer.music.load("sound/Sky_dodge_theme.ogg")
 pygame.mixer.music.play(loops=-1)
@@ -113,9 +144,12 @@ running = True
 while running:
     for event in pygame.event.get():
         if event.type == KEYDOWN:
+
             print((f"{event.key}"))
             if event.key == K_ESCAPE:
                 running = False
+
+
         elif event.type == QUIT:
             running = False
         elif event.type == ADDENEMY:
@@ -128,16 +162,23 @@ while running:
             clouds.add(new_cloud)
             all_sprites.add(new_cloud)
 
+        elif event.type == ADDPOWERUP:
+            new_powerup = Powerup()
+            powerups.add(new_powerup)
+            all_sprites.add(new_powerup)
+
+
     pressed_keys = pygame.key.get_pressed()
     player.update(pressed_keys)
     enemies.update()
     clouds.update()
+    powerups.update()
     screen.fill((135,203,250))
-    surf = pygame.Surface((50,50))
+    surf = pygame.Surface((20,20))
     for entity in all_sprites:
         screen.blit(entity.surf, entity.rect)
 
-    if pygame.sprite.spritecollideany(player,enemies):
+    if pygame.sprite.spritecollideany(player, enemies):
         player.kill()
         move_down_sound.stop()
         move_up_sound.stop()
